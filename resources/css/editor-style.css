@@ -1,0 +1,64 @@
+
+
+/*
+    Primary
+        #2196F3
+    
+    Primary Dark
+        #1976D2
+
+    Primary Light
+        #BBDEFB
+
+    Accent - Red
+        #FF5252
+
+*/
+body, html {
+    margin: 0;
+    padding: 0;
+    background-color: #FAFAFA;
+    height: 100%;
+}
+.editor-header {
+    background-color: #2196F3;
+    min-height: 3rem;
+    display: flex;
+    justify-content: space-between;
+    color: #FFFFFF;
+    padding: 0 1rem 0 1rem;
+}
+
+.editor-brand {
+    align-self: center;
+    font-size: 24px;
+}
+
+.editor-nav {
+    align-self: center;
+}
+
+.editor-nav .icon {
+    margin: 0 0.5rem 0 0.5rem;
+    border: 1px solid #FFFFFF;
+    border-radius: 0.2rem;
+    padding: 0.5rem;
+    cursor: pointer;
+}
+
+.icon:hover {
+    background-color: #1976D2;
+}
+
+.editor-content {
+    background-color: #E0E0E0;
+    min-height: 5rem;
+    flex: 0 1 auto;
+}
+
+.editor-footer {
+    min-height: 1rem;
+    background-color: #1976D2;
+    color: #FFFFFF;
+    align-self: flex-
+}
