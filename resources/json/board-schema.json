@@ -1,0 +1,10 @@
+{
+    "$schema": "com.javecross.editor.json.board",
+    "title": "Board",
+    "description": "Web-Based tile editor board container",
+    "type": "object",
+    "properties": {
+        
+    }
+    
+}

@@ -11,27 +11,43 @@
         <link rel="stylesheet" href="resources/css/editor-style.css"/>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
         <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+
+        <script src="resources/js/lib/log4javascript.js"></script>
+        <script src="resources/js/editor/tile-editor-core.js"></script>
+        <script src="resources/js/editor/objects/tile-editor.js"></script>
+
+        <script src="resources/js/editor/view/tile-editor-view.js"></script>
     </head>
     <body>
-        <header class="editor-header">
-            <div class="editor-brand">
-                Logo
-            </div>
-            <nav class="editor-nav">
-                <a class="icon icon-open fa fa-folder-open-o"></a>
-                <a class="icon icon-save fa fa-floppy-o"></a>
-            </nav>
-        </header>
-        <section class="editor-content">
-            <section class="editor-board">
-
+        <div class="editor-wrapper">
+            <header class="editor-header">
+                <div class="editor-brand">
+                    Logo
+                </div>
+                <nav class="editor-nav">
+                    <button class="icon icon-open fa fa-folder-open-o"></button>
+                    <button class="icon icon-save fa fa-floppy-o"></button>
+                    <button class="icon icon-save fa fa-cog"></button>
+                </nav>
+            </header>
+            <section class="editor-content">
+                <div class="editor-board canvas-container">
+                    <canvas class="gen-canvas board-canvas root-canvas"></canvas>
+                    <canvas class="gen-canvas board-canvas active-canvas"></canvas>
+                </div>
+                <div class="information-pane">
+                    <div class="editor-tileset canvas-container">
+                        <canvas class="gen-canvas tileset-canvas root-canvas"></canvas>
+                        <canvas class="gen-canvas tileset-canvas active-canvas"></canvas>
+                    </div>
+                    <div class="information-container">
+                        Hello world.
+                    </div>
+                </div>
             </section>
-            <section class="editor-tileset">
-
-            </section>
-        </section>
-        <footer class="editor-footer">
-            Copyrights etc. 2015
-        </footer>
+            <footer class="editor-footer">
+                Copyrights etc. 2015 - 2016
+            </footer>
+        </div>
     </body>
 </html>
