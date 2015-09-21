@@ -20,4 +20,12 @@ $(document).ready(function () {
     editor.initializeWebTileEditor(inputSettings);
     editor.loadTilesetImage(editor.DEFAULT_TILESET);
 
+    $.ajax({
+        'url': editor.DEFAULT_LEVEL,
+        'beforeSend': function (xhr) {
+            xhr.overrideMimeType('text/plain; charset=x-user-defined');
+        }
+    }).done(function (data) {
+        editor.loadBoardObject(data, 'GRAAL');
+    });
 });

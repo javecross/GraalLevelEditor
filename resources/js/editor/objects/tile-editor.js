@@ -1,4 +1,4 @@
-/*global Image */
+/*global Image, GraalLevelConverter */
 /*eslint-env browser */
 /*eslint no-console:0 */
 
@@ -56,8 +56,80 @@ com.javecross.editor.WebEditor = (function () {
         resizeCanvasElement(canvasObjects.activeTilesetCanvas, tilesetWidth, tilesetHeight);
 
         rootTileContext = canvasObjects.rootTilesetCanvas[0].getContext('2d');
+        canvasObjects.rootTilesetContext = rootTileContext;
         canvasObjects.activeTilesetCanvas.hide();
         rootTileContext.drawImage(tilesetImage, 0, 0);
+    }
+
+    function displayActiveBoard(boardText, importType) {
+        var
+                boardConverter,
+                boardWidth,
+                boardHeight,
+                rootBoardContext;
+        if (!tilesetImage || !boardObject.tilesets.activeTileset) {
+            throw new Error('Please select a tileset first!');
+        }
+        if (!canvasObjects.rootBoardCanvas) {
+            throw new Error('Unable to load board because board-canvas isn\'t defined!');
+        }
+        if (importType === 'GRAAL') {
+            boardConverter = new GraalLevelConverter();
+        } else {
+            throw new Error('Unknown board type "' + importType + '"');
+        }
+        rootBoardContext = canvasObjects.rootBoardContext;
+        if (rootBoardContext) {
+            rootBoardContext.clearRect(
+                    0,
+                    0,
+                    canvasObjects.rootBoardCanvas.width(),
+                    canvasObjects.rootBoardCanvas.height()
+                    );
+        }
+        boardObject.board = boardConverter.convertToEditorBoard(boardText);
+        boardObject.tileSize = boardConverter.getTileSize();
+
+        if (!boardObject.board) {
+            throw new Error('Received empty board from converter. Please investigate');
+        }
+
+        boardWidth = boardConverter.getMaximumBoardWidth();
+        boardHeight = boardConverter.getMaximumBoardHeight();
+
+        resizeCanvasElement(canvasObjects.rootBoardCanvas, boardWidth, boardHeight);
+        resizeCanvasElement(canvasObjects.activeBoardCanvas, boardWidth, boardHeight);
+
+        rootBoardContext = canvasObjects.rootBoardCanvas[0].getContext('2d');
+        canvasObjects.rootBoardContext = rootBoardContext;
+        canvasObjects.activeBoardCanvas.hide();
+
+        renderBoardCanvas();
+    }
+
+    function renderBoardCanvas() {
+        if (!boardObject.board) {
+            throw new Error('Unable to render board canvas, no board is defined.');
+        }
+        var drawX, drawY, rowNumber, colNumber;
+        for (rowNumber in boardObject.board) {
+            drawY = rowNumber * boardObject.tileSize;
+
+            for (colNumber in boardObject.board[rowNumber].tiles) {
+                drawX = colNumber * boardObject.tileSize;
+                canvasObjects.rootBoardContext.drawImage(
+                        tilesetImage,
+                        boardObject.board[rowNumber].tiles[colNumber][0],
+                        boardObject.board[rowNumber].tiles[colNumber][1],
+                        boardObject.tileSize,
+                        boardObject.tileSize,
+                        drawX,
+                        drawY,
+                        boardObject.tileSize,
+                        boardObject.tileSize
+                        );
+            }
+        }
     }
 
     function initializeCanvasObjects(inputSettings) {
@@ -118,14 +190,14 @@ com.javecross.editor.WebEditor = (function () {
             tilesetImage.src = tilesetString;
             boardObject.tilesets.activeTileset = tilesetString;
         },
-        loadBoardObject: function (boardFile, importType) {
+        loadBoardObject: function (boardText, importType) {
             if (!initialized) {
                 throw new Error('Tile editor needs to be initialized first!');
             }
-
+            displayActiveBoard(boardText, importType);
         }
     };
 }());
 
 com.javecross.editor.WebEditor.DEFAULT_TILESET = 'resources/images/seilius_tileset5.png';
-com.javecross.editor.WebEditor.DEFAULT_LEVEL = '/resources/other/seilius_comboshop.nw';
+com.javecross.editor.WebEditor.DEFAULT_LEVEL = 'resources/other/seilius_comboshop.nw';
