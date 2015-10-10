@@ -94,18 +94,6 @@ body, html {
     left: 0;
 }
 
-.board-canvas {
-    width: 20rem;
-    height: 20rem;
-    background-color: #2196F3;
-}
-
-.tileset-canvas {
-    width: 15rem;
-    height: 15rem;
-    background-color: #FF5252;
-}
-
 .information-pane {
     display: flex;
     flex-direction: column;

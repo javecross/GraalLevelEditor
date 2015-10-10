@@ -57,7 +57,6 @@ com.javecross.editor.WebEditor = (function () {
 
         rootTileContext = canvasObjects.rootTilesetCanvas[0].getContext('2d');
         canvasObjects.rootTilesetContext = rootTileContext;
-        canvasObjects.activeTilesetCanvas.hide();
         rootTileContext.drawImage(tilesetImage, 0, 0);
     }
 
@@ -66,7 +65,8 @@ com.javecross.editor.WebEditor = (function () {
                 boardConverter,
                 boardWidth,
                 boardHeight,
-                rootBoardContext;
+                rootBoardContext,
+                activeBoardContext;
         if (!tilesetImage || !boardObject.tilesets.activeTileset) {
             throw new Error('Please select a tileset first!');
         }
@@ -101,10 +101,51 @@ com.javecross.editor.WebEditor = (function () {
         resizeCanvasElement(canvasObjects.activeBoardCanvas, boardWidth, boardHeight);
 
         rootBoardContext = canvasObjects.rootBoardCanvas[0].getContext('2d');
-        canvasObjects.rootBoardContext = rootBoardContext;
-        canvasObjects.activeBoardCanvas.hide();
+        activeBoardContext = canvasObjects.activeBoardCanvas[0].getContext('2d');
 
+        canvasObjects.rootBoardContext = rootBoardContext;
+        canvasObjects.activeBoardContext = activeBoardContext;
+
+        canvasObjects.activeBoardCanvas.on('mousemove', function (e) {
+            var tileXY = getTileXYFromCoords(this, e, boardObject.tileSize);
+            $('.info.active-tile-coord').text('(' + tileXY[0] + ', ' + tileXY[1] + ')');
+        });
+        canvasObjects.activeBoardCanvas.on('mousedown', function (e) {
+            var tileXY = getTileXYFromCoords(this, e, boardObject.tileSize);
+            canvasObjects.activeBoardContext.clearRect(0, 0, canvasObjects.activeBoardCanvas.width(), canvasObjects.activeBoardCanvas.height());
+            canvasObjects.activeBoardContext.rect(
+                    tileXY[0] * boardObject.tileSize,
+                    tileXY[1] * boardObject.tileSize,
+                    boardObject.tileSize,
+                    boardObject.tileSize
+                    );
+            canvasObjects.activeBoardContext.stroke();
+            boardObject.activeSelection = {};
+            boardObject.activeSelection.start = tileXY;
+            console.log("Active selection: " + boardObject.activeSelection.start[0] + ", " + boardObject.activeSelection.start[1]);
+        });
+        canvasObjects.activeBoardCanvas.on('mouseup', function (e) {
+            var tileXY = getTileXYFromCoords(this, e, boardObject.tileSize);
+            console.log("End Selection @: " + tileXY[0] + ", " + tileXY[1]);
+            if (tileXY[0] === boardObject.activeSelection.start[0]
+                    && tileXY[1] === boardObject.activeSelection.start[1]) {
+                console.log("You didnt do shit!");
+            } else {
+                console.log("You went from place A to place B!");
+            }
+        });
         renderBoardCanvas();
+    }
+
+    function getTileXYFromCoords(container, event, tileSize) {
+        var offset, mouseX, mouseY, tileX, tileY;
+        offset = $(container).offset();
+        mouseX = event.pageX - offset.left;
+        mouseY = event.pageY - offset.top;
+        tileX = Math.floor(mouseX / tileSize);
+        tileY = Math.floor(mouseY / tileSize);
+
+        return [tileX, tileY];
     }
 
     function renderBoardCanvas() {
