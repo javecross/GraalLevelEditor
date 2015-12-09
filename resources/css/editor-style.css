@@ -108,4 +108,9 @@ body, html {
     background-color: #E0E0E0;
 }
 
+.editor-board.canvas-container .active-canvas:active,
+.editor-board.canvas-container .active-canvas:focus {
+    cursor: crosshair;
+}
+
 

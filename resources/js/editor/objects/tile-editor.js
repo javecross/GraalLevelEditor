@@ -10,11 +10,12 @@ if (!com || !com.javecross || !com.javecross.editor) {
 com.javecross.editor.WebEditor = (function () {
     'use strict';
     var
-            tilesetImage,
-            initialized = false,
-            canvasObjects = {},
-            editorOptions = {},
-            boardObject = {};
+        tilesetImage,
+        initialized = false,
+        canvasObjects = {},
+        editorOptions = {},
+        boardObject = {},
+        lastSelectionDrawTime = -1;
 
     /*
      * Resize the given canvas element. Try not to do this too often, canvas gets cranky!
@@ -39,18 +40,17 @@ com.javecross.editor.WebEditor = (function () {
         if (!tilesetImage) {
             throw new Error('Unable to display tileset, tileset undefined!');
         }
-        var
-                rootTileContext = canvasObjects.rootTilesetContext,
-                tilesetWidth = tilesetImage.width,
-                tilesetHeight = tilesetImage.height;
+        var rootTileContext = canvasObjects.rootTilesetContext,
+            tilesetWidth = tilesetImage.width,
+            tilesetHeight = tilesetImage.height;
 
         if (rootTileContext) {
             rootTileContext.clearRect(
-                    0,
-                    0,
-                    canvasObjects.rootTilesetCanvas.width(),
-                    canvasObjects.rootTilesetCanvas.height()
-                    );
+                0,
+                0,
+                canvasObjects.rootTilesetCanvas.width(),
+                canvasObjects.rootTilesetCanvas.height()
+                );
         }
         resizeCanvasElement(canvasObjects.rootTilesetCanvas, tilesetWidth, tilesetHeight);
         resizeCanvasElement(canvasObjects.activeTilesetCanvas, tilesetWidth, tilesetHeight);
@@ -60,13 +60,91 @@ com.javecross.editor.WebEditor = (function () {
         rootTileContext.drawImage(tilesetImage, 0, 0);
     }
 
+    function clearActiveSelection() {
+        boardObject.activeSelection = {};
+        canvasObjects.activeBoardContext.clearRect(
+            0,
+            0,
+            canvasObjects.activeBoardCanvas.width(),
+            canvasObjects.activeBoardCanvas.height()
+            );
+    }
+
+    function drawActiveSelection(initialTile, endTile) {
+        var initialx = initialTile[0] * boardObject.tileSize,
+            initialy = initialTile[1] * boardObject.tileSize,
+            width,
+            height,
+            deltax = 1,
+            deltay = 1;
+        canvasObjects.activeBoardContext.clearRect(
+            0,
+            0,
+            canvasObjects.activeBoardCanvas.width(),
+            canvasObjects.activeBoardCanvas.height()
+            );
+        if (endTile[0] < initialTile[0]) {
+            initialx += boardObject.tileSize;
+            deltax = -1;
+        }
+        if (endTile[1] < initialTile[1]) {
+            initialy += boardObject.tileSize;
+            deltay = -1;
+        }
+        width = deltax * boardObject.tileSize + (endTile[0] - initialTile[0]) * boardObject.tileSize;
+        height = deltay * boardObject.tileSize + (endTile[1] - initialTile[1]) * boardObject.tileSize;
+
+        canvasObjects.activeBoardContext.beginPath();
+        canvasObjects.activeBoardContext.rect(
+            initialx,
+            initialy,
+            width,
+            height
+            );
+        canvasObjects.activeBoardContext.stroke();
+    }
+
+    function mouseInActiveArea(mouseTile) {
+        var maxx, maxy, minx, miny;
+        if (!boardObject.activeSelection
+            || !boardObject.activeSelection.start
+            || !boardObject.activeSelection.end
+            ) {
+            return false;
+        }
+        maxx = Math.max(
+            boardObject.activeSelection.start[0],
+            boardObject.activeSelection.end[0]
+            );
+        minx = Math.min(
+            boardObject.activeSelection.start[0],
+            boardObject.activeSelection.end[0]
+            );
+        maxy = Math.max(
+            boardObject.activeSelection.start[1],
+            boardObject.activeSelection.end[1]
+            );
+        miny = Math.min(
+            boardObject.activeSelection.start[1],
+            boardObject.activeSelection.end[1]
+            );
+        if (mouseTile[0] >= minx
+            && mouseTile[0] <= maxx
+            && mouseTile[1] >= miny
+            && mouseTile[1] <= maxy
+            ) {
+            return true;
+        }
+        return false;
+    }
+
     function displayActiveBoard(boardText, importType) {
         var
-                boardConverter,
-                boardWidth,
-                boardHeight,
-                rootBoardContext,
-                activeBoardContext;
+            boardConverter,
+            boardWidth,
+            boardHeight,
+            rootBoardContext,
+            activeBoardContext;
         if (!tilesetImage || !boardObject.tilesets.activeTileset) {
             throw new Error('Please select a tileset first!');
         }
@@ -81,11 +159,11 @@ com.javecross.editor.WebEditor = (function () {
         rootBoardContext = canvasObjects.rootBoardContext;
         if (rootBoardContext) {
             rootBoardContext.clearRect(
-                    0,
-                    0,
-                    canvasObjects.rootBoardCanvas.width(),
-                    canvasObjects.rootBoardCanvas.height()
-                    );
+                0,
+                0,
+                canvasObjects.rootBoardCanvas.width(),
+                canvasObjects.rootBoardCanvas.height()
+                );
         }
         boardObject.board = boardConverter.convertToEditorBoard(boardText);
         boardObject.tileSize = boardConverter.getTileSize();
@@ -107,31 +185,101 @@ com.javecross.editor.WebEditor = (function () {
         canvasObjects.activeBoardContext = activeBoardContext;
 
         canvasObjects.activeBoardCanvas.on('mousemove', function (e) {
-            var tileXY = getTileXYFromCoords(this, e, boardObject.tileSize);
+            var tileXY = getTileXYFromCoords(this, e, boardObject.tileSize),
+                inActiveArea = mouseInActiveArea(tileXY);
             $('.info.active-tile-coord').text('(' + tileXY[0] + ', ' + tileXY[1] + ')');
+
+            if (!boardObject.mouseDown && inActiveArea) {
+                $(this).css('cursor', 'grab');
+            } else if (boardObject.mouseDown) {
+                if (boardObject.grabbing) {
+                    $(this).css('cursor', 'grabbing');
+                } else {
+                    $(this).css('cursor', 'auto');
+                    if (
+                        Date.now() - lastSelectionDrawTime
+                        > com.javecross.editor.WebEditor.SELECTION_UPDATE_INTERVAL
+                        ) {
+                        lastSelectionDrawTime = Date.now();
+                        drawActiveSelection(boardObject.activeSelection.start, tileXY);
+                    }
+                }
+            } else {
+                $(this).css('cursor', 'auto');
+            }
+            /*
+             if (!inActiveArea) {
+             $(this).css('cursor', 'auto');
+             if (boardObject.mouseDown) {
+             if (
+             Date.now() - lastSelectionDrawTime
+             > com.javecross.editor.WebEditor.SELECTION_UPDATE_INTERVAL
+             ) {
+             lastSelectionDrawTime = Date.now();
+             drawActiveSelection(boardObject.activeSelection.start, tileXY);
+             }
+             }
+             } else {
+             if (boardObject.mouseDown) {
+             $(this).css('cursor', 'grabbing');
+             } else {
+             $(this).css('cursor', 'grab');
+             }
+             }
+             */
         });
         canvasObjects.activeBoardCanvas.on('mousedown', function (e) {
             var tileXY = getTileXYFromCoords(this, e, boardObject.tileSize);
-            canvasObjects.activeBoardContext.clearRect(0, 0, canvasObjects.activeBoardCanvas.width(), canvasObjects.activeBoardCanvas.height());
-            canvasObjects.activeBoardContext.rect(
-                    tileXY[0] * boardObject.tileSize,
-                    tileXY[1] * boardObject.tileSize,
-                    boardObject.tileSize,
-                    boardObject.tileSize
-                    );
-            canvasObjects.activeBoardContext.stroke();
+            boardObject.mouseDown = true;
+
+            if (mouseInActiveArea(tileXY)) {
+                $(canvasObjects.activeBoardCanvas).css('cursor', 'grabbing');
+                boardObject.grabbing = true;
+                boardObject.activeSelection.translationTile = tileXY;
+                return;
+            }
+            drawActiveSelection(tileXY, tileXY);
             boardObject.activeSelection = {};
             boardObject.activeSelection.start = tileXY;
-            console.log("Active selection: " + boardObject.activeSelection.start[0] + ", " + boardObject.activeSelection.start[1]);
+            boardObject.activeSelection.startMouse = [e.pageX, e.pageY];
+            console.log(
+                "Active selection: "
+                + boardObject.activeSelection.start[0]
+                + ", "
+                + boardObject.activeSelection.start[1]
+                );
         });
         canvasObjects.activeBoardCanvas.on('mouseup', function (e) {
             var tileXY = getTileXYFromCoords(this, e, boardObject.tileSize);
-            console.log("End Selection @: " + tileXY[0] + ", " + tileXY[1]);
-            if (tileXY[0] === boardObject.activeSelection.start[0]
-                    && tileXY[1] === boardObject.activeSelection.start[1]) {
-                console.log("You didnt do shit!");
+            $(canvasObjects.activeBoardCanvas).css('cursor', 'auto');
+            boardObject.mouseDown = false;
+            if (!boardObject.activeSelection) {
+                return;
+            }
+            if (boardObject.grabbing) {
+                // The user was dragging the active selection around, and is now done.
+                boardObject.grabbing = false;
+                console.log(
+                    'translate active area from: '
+                    + boardObject.activeSelection.translationTile[0]
+                    + ', '
+                    + boardObject.activeSelection.translationTile[1]
+                    + ' to '
+                    + tileXY[0]
+                    + ', '
+                    + tileXY[1]
+                    );
+                return;
+            }
+            if (tileXY[0] !== boardObject.activeSelection.start[0]
+                && tileXY[1] !== boardObject.activeSelection.start[1]) {
+                boardObject.activeSelection.end = tileXY;
             } else {
-                console.log("You went from place A to place B!");
+                if (e.pageX === boardObject.activeSelection.startMouse[0]
+                    && e.pageY === boardObject.activeSelection.startMouse[1]) {
+                    // User didn't move the mouse at all!
+                    clearActiveSelection();
+                }
             }
         });
         renderBoardCanvas();
@@ -159,16 +307,16 @@ com.javecross.editor.WebEditor = (function () {
             for (colNumber in boardObject.board[rowNumber].tiles) {
                 drawX = colNumber * boardObject.tileSize;
                 canvasObjects.rootBoardContext.drawImage(
-                        tilesetImage,
-                        boardObject.board[rowNumber].tiles[colNumber][0],
-                        boardObject.board[rowNumber].tiles[colNumber][1],
-                        boardObject.tileSize,
-                        boardObject.tileSize,
-                        drawX,
-                        drawY,
-                        boardObject.tileSize,
-                        boardObject.tileSize
-                        );
+                    tilesetImage,
+                    boardObject.board[rowNumber].tiles[colNumber][0],
+                    boardObject.board[rowNumber].tiles[colNumber][1],
+                    boardObject.tileSize,
+                    boardObject.tileSize,
+                    drawX,
+                    drawY,
+                    boardObject.tileSize,
+                    boardObject.tileSize
+                    );
             }
         }
     }
@@ -242,3 +390,4 @@ com.javecross.editor.WebEditor = (function () {
 
 com.javecross.editor.WebEditor.DEFAULT_TILESET = 'resources/images/seilius_tileset5.png';
 com.javecross.editor.WebEditor.DEFAULT_LEVEL = 'resources/other/seilius_comboshop.nw';
+com.javecross.editor.WebEditor.SELECTION_UPDATE_INTERVAL = 25;
